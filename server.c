@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <time.h>
+#include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,6 +18,41 @@ void usage(int argc, char **argv){
     exit(EXIT_FAILURE);
 }
 
+struct client_data{
+    int csock;
+    struct sockaddr_storage storage;
+};
+
+void * client_thread(void *data){
+    struct client_data *cdata = (struct client_data *)data;
+    struct sockaddr *caddr = (struct sockaddr *)(&cdata->storage);
+
+    char caddrstr[BUFSZ];
+    addrtostr(caddr, caddrstr, BUFSZ);
+    printf("[log]Conexão de %s\n", caddrstr);
+    
+    while(1){
+        memset(buf, 0, BUFSZ);
+        count = recv(cdata->csock, buf, BUFSZ, 0);
+        printf("[msg]Cliente > %s", buf);
+        
+        //Encerra conexão
+        if(strcmp(buf,"exit\n") == 0) {
+            sprintf(buf, "Conexao Encerrada\n");
+            break;
+        }
+
+        printf("[msg]Servidor > %s", buf);
+        count = send(cdata->csock, buf, strlen(buf)+1, 0);
+        if(count != strlen(buf)+1) logexit("send");
+    }
+
+    send(cdata->csock, buf, strlen(buf)+1, 0);
+    printf("[log]%s",buf);
+    close(cdata->csock);
+
+    pthread_exit(EXIT_SUCCESS);
+}
 
 int main(int argc, char **argv){
     if(argc < 3) usage(argc, argv); //Verificar chamada correta
@@ -47,36 +83,24 @@ int main(int argc, char **argv){
     addrtostr(addr, addrstr, BUFSZ);
     printf("[log]Conectado a %s, aguardando conexões\n", addrstr);
     
-    char caddrstr[BUFSZ];
-    struct sockaddr_storage cstorage;
-    struct sockaddr *caddr = (struct sockaddr *)(&cstorage);
-    socklen_t caddrlen = sizeof(cstorage);
-
-    int csock = accept(s, caddr, &caddrlen);
-    if(csock == -1) logexit("accept");
-
-    addrtostr(caddr, caddrstr, BUFSZ);
-    printf("[log]Conexão de %s\n", caddrstr);
     while(1){
-        memset(buf, 0, BUFSZ);
-        count = recv(csock, buf, BUFSZ, 0);
-        printf("[msg]Cliente > %s", buf);
-        
-        //Encerra conexão
-        if(strcmp(buf,"exit\n") == 0) {
-            sprintf(buf, "Conexao Encerrada\n");
-            break;
+        struct sockaddr_storage cstorage;
+        struct sockaddr *caddr = (struct sockaddr *)(&cstorage);
+        socklen_t caddrlen = sizeof(cstorage);
+
+        int csock = accept(s, caddr, &caddrlen);
+        if(csock == -1) logexit("accept");
+
+        struct client_data *cdata = malloc(sizeof(*cdata));
+        if(!cdata){
+            logexit("Malloc");
         }
+        cdata->csock = csock;
+        memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
 
-        printf("[msg]Servidor > %s", buf);
-        count = send(csock, buf, strlen(buf)+1, 0);
-        if(count != strlen(buf)+1) logexit("send");
+        pthread_t tid;
+        pthread_create(&tid, NULL, client_thread, cdata);
     }
-
-    send(csock, buf, strlen(buf)+1, 0);
-    printf("[log]%s",buf);
-    close(csock);
-
     exit(EXIT_SUCCESS);
     return 0;
 }
