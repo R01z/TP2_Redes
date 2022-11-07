@@ -23,8 +23,6 @@ int main(int argc, char **argv){
 
     char buf[BUFSZ];
     size_t count;
-    racks rack[RACKS];
-    setRack(rack);
 
     //Chamada do connect
     struct sockaddr_storage storage;
@@ -69,9 +67,6 @@ int main(int argc, char **argv){
             sprintf(buf, "Conexao Encerrada\n");
             break;
         }
-
-        if(acao != 0)
-            break;
 
         printf("[msg]Servidor > %s", buf);
         count = send(csock, buf, strlen(buf)+1, 0);
