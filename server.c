@@ -9,7 +9,9 @@
 #include <sys/socket.h>
 
 #define BUFSZ 1024
-#define CONEXOES 10
+#define THREAD_NUMBER 10
+
+pthread_t tid[THREAD_NUMBER];
 
 void usage(int argc, char **argv){
     printf("usage\n");
@@ -97,6 +99,13 @@ int main(int argc, char **argv){
         if(csock == -1) logexit("accept");
 
         ids++;
+        if(ids>THREAD_NUMBER){
+            sprintf(buf, "Número de conexões excedido\n");
+            count = send(csock, buf, strlen(buf)+1, 0);
+            if(count != strlen(buf)+1) logexit("send");
+            close(csock);
+            continue;
+        }
 
         struct client_data *cdata = malloc(sizeof(*cdata));
         if(!cdata){
@@ -106,8 +115,7 @@ int main(int argc, char **argv){
         memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
         cdata->id = ids;
 
-        pthread_t tid;
-        pthread_create(&tid, NULL, client_thread, cdata);
+        pthread_create(&(tid[ids-1]), NULL, client_thread, cdata);
     }
     exit(EXIT_SUCCESS);
     return 0;
