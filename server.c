@@ -12,6 +12,8 @@
 #define THREAD_NUMBER 10
 
 pthread_t tid[THREAD_NUMBER];
+int socketsList[THREAD_NUMBER];
+int threadsOcupadas[THREAD_NUMBER];
 
 void usage(int argc, char **argv){
     printf("usage\n");
@@ -24,6 +26,15 @@ struct client_data{
     struct sockaddr_storage storage;
 };
 
+void broadcastMessage(const char *msg){
+    int count;
+    for(int i=0;i<THREAD_NUMBER;i++)
+        if(threadsOcupadas[i]){
+            count = send(socketsList[i], msg, strlen(msg), 0);
+            if(count != strlen(msg)) logexit("broadcast");
+        }
+}
+
 void * client_thread(void *data){
     struct client_data *cdata = (struct client_data *)data;
     struct sockaddr *caddr = (struct sockaddr *)(&cdata->storage);
@@ -31,7 +42,10 @@ void * client_thread(void *data){
     char caddrstr[BUFSZ];
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log]Conexão de %s\n", caddrstr);
-    
+    socketsList[cdata->id-1] = cdata->csock;
+    threadsOcupadas[cdata->id-1] = 1;
+
+
     char buf[BUFSZ];
     memset(buf, 0, BUFSZ);
 
@@ -46,15 +60,17 @@ void * client_thread(void *data){
             break;
         }
 
-
-        sprintf(buf, "Mensagem recebida\n");
+        sprintf(buf, "Broadcast: mensagem de %d\n",cdata->id);
         printf("[msg]Servidor > %s", buf);
-        count = send(cdata->csock, buf, strlen(buf)+1, 0);
-        if(count != strlen(buf)+1) logexit("send");
+        //count = send(socketsList[cdata->id-1], buf, strlen(buf)+1, 0);
+        //if(count != strlen(buf)+1) logexit("send");
+        broadcastMessage(buf);
     }
 
     send(cdata->csock, buf, strlen(buf)+1, 0);
     printf("[log]%s",buf);
+    socketsList[cdata->id-1] = 0;
+    threadsOcupadas[cdata->id-1] = 0;
     close(cdata->csock);
 
     pthread_exit(EXIT_SUCCESS);
@@ -65,6 +81,9 @@ int main(int argc, char **argv){
 
     char buf[BUFSZ];
     size_t count;
+
+    //Limpa threads
+    for(int i=0;i<THREAD_NUMBER;i++) socketsList[i] = 0;
 
     //Chamada do connect
     struct sockaddr_storage storage;
