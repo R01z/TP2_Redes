@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 
 #define BUFSZ 1024
+#define CONEXOES 10
 
 void usage(int argc, char **argv){
     printf("usage\n");
