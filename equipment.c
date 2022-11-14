@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -15,6 +16,23 @@
 void usage(int argc, char **argv){
     printf("ERRO NA CHAMADA\n");
     exit(EXIT_FAILURE);
+}
+
+void recebeMensagem(void *arg){
+    int csock = *((int *)arg);
+
+    int count;
+    char buf[BUFSZ];
+
+    while (1){
+       //Receber mensagem
+        memset(buf, 0, BUFSZ);
+        count = recv(csock, buf, BUFSZ, 0);
+        printf("[msg]Server > %s",buf);
+    }
+
+    pthread_exit(EXIT_SUCCESS);
+    
 }
 
 int main(int argc, char **argv){
@@ -42,23 +60,21 @@ int main(int argc, char **argv){
     //Comunicação cliente-servidor
     char buf[BUFSZ];
     unsigned total = 0;
+    pthread_t tid; //Mensagens serão recebidas usando thread
+
+    pthread_create(&tid, NULL, recebeMensagem, (void *)&s);
+
     while(1){
         memset(buf, 0, BUFSZ);
-        printf("[msg]Cliente > ");
         fgets(buf, BUFSZ-1, stdin);
         count = send(s, buf, strlen(buf)+1, 0);
         if(count != strlen(buf)+1) logexit("send");
 
-        memset(buf, 0, BUFSZ);
-        total = 0;
-        
-        //Receber mensagem
-        count = recv(s, buf + total, BUFSZ - total, 0);
-        
-        printf("[msg]Server > %s",buf);
-
         //Encerra conexão
-        if(strncmp(buf,"Conexao Encerrada", 17) == 0){
+        if(strcmp(buf,"exit") == 0){
+            memset(buf, 0, BUFSZ);
+            count = recv(s, buf, BUFSZ, 0);
+            printf("[msg]Server > %s",buf);
             break;
         }
     }
