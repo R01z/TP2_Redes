@@ -106,7 +106,7 @@ void * client_thread(void *data){
 }
 
 int main(int argc, char **argv){
-    if(argc < 3) usage(argc, argv); //Verificar chamada correta
+    if(argc < 2) usage(argc, argv); //Verificar chamada correta
 
     char buf[BUFSZ];
     size_t count;
@@ -116,7 +116,7 @@ int main(int argc, char **argv){
 
     //Chamada do connect
     struct sockaddr_storage storage;
-    if(server_sockaddr_init(argv[1], argv[2], &storage) !=0) usage(argc, argv);
+    if(server_sockaddr_init("v4", argv[1], &storage) !=0) usage(argc, argv);
 
     //Criar Socket
     int s;
