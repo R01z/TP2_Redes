@@ -56,7 +56,7 @@ void trataMensagem(const char *buf){
 }
 
 void * client_thread(void *data){
-    struct equipment_data *cdata = (struct equipment_data *)data;
+    equip *cdata = (equip *)data;
     struct sockaddr *caddr = (struct sockaddr *)(&cdata->storage);
 
     char caddrstr[BUFSZ];
