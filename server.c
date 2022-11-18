@@ -20,28 +20,57 @@ void usage(int argc, char **argv){
     exit(EXIT_FAILURE);
 }
 
-struct client_data{
+struct equipment_data{
     int id;
     int csock;
     struct sockaddr_storage storage;
 };
 
+void enviaMensagem(const char *msg, int socket){
+    int count = send(socket, msg, strlen(msg), 0);
+    if(count != strlen(msg)) logexit("Envia Mensagem");
+}
+
 void broadcastMessage(const char *msg){
     int count;
     for(int i=0;i<THREAD_NUMBER;i++)
         if(threadsOcupadas[i]){
-            count = send(socketsList[i], msg, strlen(msg), 0);
-            if(count != strlen(msg)) logexit("broadcast");
+            enviaMensagem(msg, socketsList[i]);
         }
 }
 
+void errorMessage(const char *buf, int i){
+    memset(buf, 0, BUFSZ);
+    switch(i){
+        case 1:
+            sprintf(buf, "Equipment not found\n");
+            break;
+        case 2:
+            sprintf(buf, "Source equipment not found\n");
+            break;
+        case 3:
+            sprintf(buf, "Target equipment not found\n");
+            break;
+        case 4:
+            sprintf(buf, "Equipment limit exceeded\n");
+            break;
+        default:
+            sprintf(buf, "Unknow error\n");
+    }
+}
+
+void trataMensagem(const char *buf){
+
+}
+
 void * client_thread(void *data){
-    struct client_data *cdata = (struct client_data *)data;
+    struct equipment_data *cdata = (struct equipment_data *)data;
     struct sockaddr *caddr = (struct sockaddr *)(&cdata->storage);
 
     char caddrstr[BUFSZ];
     addrtostr(caddr, caddrstr, BUFSZ);
-    printf("[log]Conexão de %s\n", caddrstr);
+
+    //Equipamento entra na lista de sockets
     socketsList[cdata->id-1] = cdata->csock;
     threadsOcupadas[cdata->id-1] = 1;
 
@@ -108,7 +137,7 @@ int main(int argc, char **argv){
     addrtostr(addr, addrstr, BUFSZ);
     printf("[log]Conectado a %s, aguardando conexões\n", addrstr);
     
-    int ids = 0;
+    int ids = 0;// Controla quantidade de conexões
     while(1){
         struct sockaddr_storage cstorage;
         struct sockaddr *caddr = (struct sockaddr *)(&cstorage);
@@ -119,14 +148,13 @@ int main(int argc, char **argv){
 
         ids++;
         if(ids>THREAD_NUMBER){
-            sprintf(buf, "Número de conexões excedido\n");
-            count = send(csock, buf, strlen(buf)+1, 0);
-            if(count != strlen(buf)+1) logexit("send");
+            errorMessage(buf, 4);
+            enviaMensagem(buf, csock);
             close(csock);
             continue;
         }
-
-        struct client_data *cdata = malloc(sizeof(*cdata));
+        
+        struct equipment_data *cdata = malloc(sizeof(*cdata));
         if(!cdata){
             logexit("Malloc");
         }
@@ -134,6 +162,17 @@ int main(int argc, char **argv){
         memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
         cdata->id = ids;
 
+        //Envia broadcast da adição de equipamento
+        memset(buf, 0, BUFSZ);
+        sprintf(buf,"Equipment 0%d added\n", ids);
+        printf(buf);
+        broadcastMessage(buf);
+
+        memset(buf, 0, BUFSZ);
+        sprintf(buf,"New ID: 0%d\n", ids);
+        enviaMensagem(buf, csock);
+
+        //Cria thread para equipamento
         pthread_create(&(tid[ids-1]), NULL, client_thread, cdata);
     }
     exit(EXIT_SUCCESS);

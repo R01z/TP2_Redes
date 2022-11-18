@@ -28,7 +28,7 @@ void recebeMensagem(void *arg){
        //Receber mensagem
         memset(buf, 0, BUFSZ);
         count = recv(csock, buf, BUFSZ, 0);
-        printf("[msg]Server > %s",buf);
+        printf("%s",buf);
     }
 
     pthread_exit(EXIT_SUCCESS);
@@ -39,6 +39,8 @@ int main(int argc, char **argv){
     if(argc < 3) usage(argc, argv); //Verificar chamada correta
 
     size_t count=0;
+    char buf[BUFSZ];
+    memset(buf, 0, BUFSZ);
 
     //Chamada do connect
     struct sockaddr_storage storage;
@@ -52,13 +54,11 @@ int main(int argc, char **argv){
     struct sockaddr *addr = (struct sockaddr *)(&storage);
     if(connect(s, addr, sizeof(storage)) != 0) logexit("connect");
 
-    //Imprimir endereço conectado
-    char addrstr[BUFSZ];
-    addrtostr(addr, addrstr, BUFSZ);
-    printf("[log]Conectado a %s\n", addrstr);
+    //Confirmar conexão
+    count = recv(s, buf, BUFSZ, 0);
+    printf(buf);
 
     //Comunicação cliente-servidor
-    char buf[BUFSZ];
     unsigned total = 0;
     pthread_t tid; //Mensagens serão recebidas usando thread
 
@@ -72,9 +72,6 @@ int main(int argc, char **argv){
 
         //Encerra conexão
         if(strcmp(buf,"exit") == 0){
-            memset(buf, 0, BUFSZ);
-            count = recv(s, buf, BUFSZ, 0);
-            printf("[msg]Server > %s",buf);
             break;
         }
     }
