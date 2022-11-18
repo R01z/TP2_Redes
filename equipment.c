@@ -71,7 +71,7 @@ int main(int argc, char **argv){
         if(count != strlen(buf)+1) logexit("send");
 
         //Encerra conexão
-        if(strcmp(buf,"exit") == 0){
+        if(strcmp(buf,"exit\n") == 0){
             break;
         }
     }

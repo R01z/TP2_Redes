@@ -11,6 +11,12 @@
 #define BUFSZ 1024
 #define THREAD_NUMBER 10
 
+struct equipment_data{
+    int id;
+    int csock;
+    struct sockaddr_storage storage;
+};
+
 pthread_t tid[THREAD_NUMBER];
 int socketsList[THREAD_NUMBER];
 int threadsOcupadas[THREAD_NUMBER];
@@ -19,12 +25,6 @@ void usage(int argc, char **argv){
     printf("usage\n");
     exit(EXIT_FAILURE);
 }
-
-struct equipment_data{
-    int id;
-    int csock;
-    struct sockaddr_storage storage;
-};
 
 void enviaMensagem(const char *msg, int socket){
     int count = send(socket, msg, strlen(msg), 0);
