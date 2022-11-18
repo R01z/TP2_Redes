@@ -1,21 +1,13 @@
 #include "common.h"
+#include "no.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-
 #define BUFSZ 1024
 #define THREAD_NUMBER 10
-
-struct equipment_data{
-    int id;
-    int csock;
-    struct sockaddr_storage storage;
-};
 
 pthread_t tid[THREAD_NUMBER];
 int socketsList[THREAD_NUMBER];
@@ -154,13 +146,7 @@ int main(int argc, char **argv){
             continue;
         }
         
-        struct equipment_data *cdata = malloc(sizeof(*cdata));
-        if(!cdata){
-            logexit("Malloc");
-        }
-        cdata->csock = csock;
-        memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
-        cdata->id = ids;
+        equip *cdata = criaEquip(ids, csock, cstorage);
 
         //Envia broadcast da adição de equipamento
         memset(buf, 0, BUFSZ);
