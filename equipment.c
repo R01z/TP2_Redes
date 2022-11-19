@@ -15,13 +15,6 @@
 #define THREAD_NUMBER 3
 
 int id;
-int listaEquipamentos[THREAD_NUMBER];
-
-void trataMensagem(const char *buf){
-    char *tokens;
-
-    tokens = strtok(buf, " ");
-}
 
 void usage(int argc, char **argv){
     printf("ERRO NA CHAMADA\n");
@@ -42,7 +35,6 @@ void recebeMensagem(void *arg){
         if(strcmp(buf, "Successful removal\n") == 0){
             break;
         }
-        else trataMensagem(buf);
     }
 
     close(csock);

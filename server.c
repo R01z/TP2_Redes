@@ -26,6 +26,19 @@ struct equipment_data{
     struct sockaddr_storage storage;
 };
 
+void pegaLista(const char *buf, int id){
+    char aux[5];
+    memset(buf, 0, BUFSZ);
+
+    for(int i=0;i<THREAD_NUMBER;i++){
+        if(i+1 != id && threadsOcupadas[i] == 1){
+            sprintf(aux, "0%d ", i+1);
+            strcat(buf, aux);
+        }
+    }
+    strcat(buf, "\n");
+}
+
 void enviaMensagem(const char *msg, int socket){
     int count = send(socket, msg, strlen(msg), 0);
     if(count != strlen(msg)) logexit("Envia Mensagem");
@@ -59,8 +72,11 @@ void errorMessage(const char *buf, int i){
     }
 }
 
-void trataMensagem(const char *buf){
-
+void trataMensagem(const char *buf, struct equipment_data* cdata){
+    if(strcmp(buf, "list equipment\n") == 0){
+        pegaLista(buf, cdata->id);
+        enviaMensagem(buf, cdata->csock);
+    }
 }
 
 void * client_thread(void *data){
@@ -74,14 +90,12 @@ void * client_thread(void *data){
     socketsList[cdata->id-1] = cdata->csock;
     threadsOcupadas[cdata->id-1] = 1;
 
-
     char buf[BUFSZ];
     memset(buf, 0, BUFSZ);
 
     while(1){
         memset(buf, 0, BUFSZ);
         size_t count = recv(cdata->csock, buf, BUFSZ, 0);
-        printf("[msg]Cliente %d > %s",cdata->id, buf);
         
         //Encerra conexão
         if(strcmp(buf,"close connection\n") == 0) {
@@ -93,12 +107,9 @@ void * client_thread(void *data){
             broadcastMessage(buf);
             break;
         }
-
-        sprintf(buf, "Broadcast: mensagem de %d\n",cdata->id);
-        printf("%s", buf);
-        //count = send(socketsList[cdata->id-1], buf, strlen(buf)+1, 0);
-        //if(count != strlen(buf)+1) logexit("send");
-        broadcastMessage(buf);
+        else{
+            trataMensagem(buf, cdata);
+        }
     }
 
     printf(buf);
@@ -162,6 +173,8 @@ int main(int argc, char **argv){
             continue;
         }
         
+
+
         struct equipment_data *cdata = malloc(sizeof(*cdata));
         if(!cdata){
             logexit("Malloc");
