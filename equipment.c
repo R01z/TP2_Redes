@@ -12,6 +12,14 @@
 //Windows não possui "sys/socket.h", esse programa rodará apenas no linux
 
 #define BUFSZ 1024
+#define THREAD_NUMBER 3
+
+int id;
+int listaEquipamentos[THREAD_NUMBER];
+
+void trataMensagem(const char *buf){
+    
+}
 
 void usage(int argc, char **argv){
     printf("ERRO NA CHAMADA\n");
@@ -29,9 +37,15 @@ void recebeMensagem(void *arg){
         memset(buf, 0, BUFSZ);
         count = recv(csock, buf, BUFSZ, 0);
         printf("%s",buf);
+        if(strcmp(buf, "Successful removal\n") == 0){
+            break;
+        }
+        else trataMensagem(buf);
     }
 
-    pthread_exit(EXIT_SUCCESS);
+    close(csock);
+
+    exit(EXIT_SUCCESS);
     
 }
 
@@ -57,6 +71,11 @@ int main(int argc, char **argv){
     //Confirmar conexão
     count = recv(s, buf, BUFSZ, 0);
     printf(buf);
+    if(strcmp(buf,"Equipment limit exceeded\n") == 0){
+        close(s);
+        exit(EXIT_SUCCESS);
+        return 0;
+    }
 
     //Comunicação cliente-servidor
     unsigned total = 0;
@@ -69,11 +88,6 @@ int main(int argc, char **argv){
         fgets(buf, BUFSZ-1, stdin);
         count = send(s, buf, strlen(buf)+1, 0);
         if(count != strlen(buf)+1) logexit("send");
-
-        //Encerra conexão
-        if(strcmp(buf,"exit\n") == 0){
-            break;
-        }
     }
 
     printf("[log] Conexão Encerrada\n");

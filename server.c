@@ -1,13 +1,15 @@
 #include "common.h"
-#include "no.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #define BUFSZ 1024
-#define THREAD_NUMBER 10
+#define THREAD_NUMBER 3
 
 pthread_t tid[THREAD_NUMBER];
 int socketsList[THREAD_NUMBER];
@@ -17,6 +19,12 @@ void usage(int argc, char **argv){
     printf("usage\n");
     exit(EXIT_FAILURE);
 }
+
+struct equipment_data{
+    int id;
+    int csock;
+    struct sockaddr_storage storage;
+};
 
 void enviaMensagem(const char *msg, int socket){
     int count = send(socket, msg, strlen(msg), 0);
@@ -56,7 +64,7 @@ void trataMensagem(const char *buf){
 }
 
 void * client_thread(void *data){
-    equip *cdata = (equip *)data;
+    struct equipment_data *cdata = (struct equipment_data *)data;
     struct sockaddr *caddr = (struct sockaddr *)(&cdata->storage);
 
     char caddrstr[BUFSZ];
@@ -76,22 +84,24 @@ void * client_thread(void *data){
         printf("[msg]Cliente %d > %s",cdata->id, buf);
         
         //Encerra conexão
-        if(strcmp(buf,"exit\n") == 0) {
-            sprintf(buf, "Conexao Encerrada\n");
+        if(strcmp(buf,"close connection\n") == 0) {
+            socketsList[cdata->id-1] = 0;
+            threadsOcupadas[cdata->id-1] = 0;
+            sprintf(buf, "Successful removal\n");
+            enviaMensagem(buf, cdata->csock);
+            sprintf(buf, "Equipment 0%d removed\n", cdata->id);
+            broadcastMessage(buf);
             break;
         }
 
         sprintf(buf, "Broadcast: mensagem de %d\n",cdata->id);
-        printf("[msg]Servidor > %s", buf);
+        printf("%s", buf);
         //count = send(socketsList[cdata->id-1], buf, strlen(buf)+1, 0);
         //if(count != strlen(buf)+1) logexit("send");
         broadcastMessage(buf);
     }
 
-    send(cdata->csock, buf, strlen(buf)+1, 0);
-    printf("[log]%s",buf);
-    socketsList[cdata->id-1] = 0;
-    threadsOcupadas[cdata->id-1] = 0;
+    printf(buf);
     close(cdata->csock);
 
     pthread_exit(EXIT_SUCCESS);
@@ -138,7 +148,13 @@ int main(int argc, char **argv){
         int csock = accept(s, caddr, &caddrlen);
         if(csock == -1) logexit("accept");
 
-        ids++;
+        for(int i=0;i<THREAD_NUMBER;i++){
+            if(threadsOcupadas[i] == 0){
+                ids = i+1;
+                break;
+            }
+            else ids = THREAD_NUMBER+10;
+        }
         if(ids>THREAD_NUMBER){
             errorMessage(buf, 4);
             enviaMensagem(buf, csock);
@@ -146,7 +162,13 @@ int main(int argc, char **argv){
             continue;
         }
         
-        equip *cdata = criaEquip(ids, csock, cstorage);
+        struct equipment_data *cdata = malloc(sizeof(*cdata));
+        if(!cdata){
+            logexit("Malloc");
+        }
+        cdata->csock = csock;
+        memcpy(&(cdata->storage), &cstorage, sizeof(cstorage));
+        cdata->id = ids;
 
         //Envia broadcast da adição de equipamento
         memset(buf, 0, BUFSZ);
