@@ -18,7 +18,9 @@ int id;
 int listaEquipamentos[THREAD_NUMBER];
 
 void trataMensagem(const char *buf){
-    
+    char *tokens;
+
+    tokens = strtok(buf, " ");
 }
 
 void usage(int argc, char **argv){

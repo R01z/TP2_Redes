@@ -88,3 +88,15 @@ int server_sockaddr_init(const char *proto, const char* portstr,
     }
     else return -1;
 }
+
+//Função para conferir se string passada é digito, retorna 0 se não for
+int isDigit(const char * str){
+    if(!str) return 0; //Se string for NULL
+    if(!(*str)) return 0; //Se string for vazia
+    if(str[0] != '0') return 0; //Garantindo que possui zero a esquerda
+
+    while(*str)
+        if(!isdigit(*str++))
+            return 0;
+    return 1;
+}
