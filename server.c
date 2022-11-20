@@ -77,6 +77,31 @@ void trataMensagem(const char *buf, struct equipment_data* cdata){
         pegaLista(buf, cdata->id);
         enviaMensagem(buf, cdata->csock);
     }
+    else{
+        char *tokens;
+        tokens = strtok(buf,"0");
+        if(strcmp(tokens,"request information from ") == 0){
+            tokens = strtok(NULL, "\n");
+            int req = atoi(tokens);
+            if(threadsOcupadas[req-1] != 1){
+                printf("Equipment 0%d not found\n",req);
+                errorMessage(buf, 3);
+                enviaMensagem(buf, cdata->csock);
+            }
+            else{
+                memset(buf, 0, BUFSZ);
+                sprintf(buf,"requested information\n");
+                enviaMensagem(buf,socketsList[req-1]);
+                memset(buf, 0, BUFSZ);
+                size_t count = recv(socketsList[req-1], buf, BUFSZ, 0);
+                enviaMensagem(buf, cdata->csock);
+            }
+        }
+        else{
+            errorMessage(buf,0);
+            enviaMensagem(buf, cdata->csock);
+        }
+    }
 }
 
 void * client_thread(void *data){
@@ -101,7 +126,7 @@ void * client_thread(void *data){
         if(strcmp(buf,"close connection\n") == 0) {
             socketsList[cdata->id-1] = 0;
             threadsOcupadas[cdata->id-1] = 0;
-            sprintf(buf, "Successful removal\n");
+            sprintf(buf, "Success\n");
             enviaMensagem(buf, cdata->csock);
             sprintf(buf, "Equipment 0%d removed\n", cdata->id);
             broadcastMessage(buf);
@@ -146,10 +171,6 @@ int main(int argc, char **argv){
 
     if(listen(s, 10)!=0) logexit("listen");
 
-    char addrstr[BUFSZ];
-    addrtostr(addr, addrstr, BUFSZ);
-    printf("[log]Conectado a %s, aguardando conexões\n", addrstr);
-    
     int ids = 0;// Controla quantidade de conexões
     while(1){
         struct sockaddr_storage cstorage;
@@ -173,8 +194,6 @@ int main(int argc, char **argv){
             continue;
         }
         
-
-
         struct equipment_data *cdata = malloc(sizeof(*cdata));
         if(!cdata){
             logexit("Malloc");

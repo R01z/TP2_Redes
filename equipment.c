@@ -15,10 +15,26 @@
 #define THREAD_NUMBER 3
 
 int id;
+int s;
 
 void usage(int argc, char **argv){
     printf("ERRO NA CHAMADA\n");
     exit(EXIT_FAILURE);
+}
+
+void obtemId(const char *buf){
+    char *tokens;
+    tokens = strtok(buf,":");
+    if(strcmp(tokens,"New ID") == 0){
+        tokens = strtok(NULL,"\n");
+        id = atoi(tokens);
+    }
+}
+
+void obtemInfo(const char *buf){
+    memset(buf, 0, BUFSZ);
+    float dado = rand()%1000/100.0;
+    sprintf(buf,"Value from 0%d: %.2f\n",id,dado);
 }
 
 void recebeMensagem(void *arg){
@@ -32,8 +48,12 @@ void recebeMensagem(void *arg){
         memset(buf, 0, BUFSZ);
         count = recv(csock, buf, BUFSZ, 0);
         printf("%s",buf);
-        if(strcmp(buf, "Successful removal\n") == 0){
+        if(strcmp(buf, "Success\n") == 0){
             break;
+        }
+        else if(strcmp(buf,"requested information\n") == 0){
+            obtemInfo(buf);
+            count = send(s, buf, strlen(buf), 0);
         }
     }
 
@@ -55,7 +75,6 @@ int main(int argc, char **argv){
     if(addrparse(argv[1], argv[2], &storage) !=0) usage(argc, argv);
 
     //Criar Socket
-    int s;
     s = socket(storage.ss_family, SOCK_STREAM, 0);
     if(s == -1) logexit("socket");
 
@@ -70,6 +89,7 @@ int main(int argc, char **argv){
         exit(EXIT_SUCCESS);
         return 0;
     }
+    else obtemId(buf);
 
     //Comunicação cliente-servidor
     unsigned total = 0;
