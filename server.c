@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 
 #define BUFSZ 1024
-#define THREAD_NUMBER 3
+#define THREAD_NUMBER 10
 
 pthread_t tid[THREAD_NUMBER];
 int socketsList[THREAD_NUMBER];
@@ -73,7 +73,11 @@ void errorMessage(const char *buf, int i){
 }
 
 void trataMensagem(const char *buf, struct equipment_data* cdata){
-    if(strcmp(buf, "list equipment\n") == 0){
+    if(threadsOcupadas[cdata->id-1] == 0){
+        errorMessage(buf, 2);
+        enviaMensagem(buf, cdata->csock);
+    }
+    else if(strcmp(buf, "list equipment\n") == 0){
         pegaLista(buf, cdata->id);
         enviaMensagem(buf, cdata->csock);
     }

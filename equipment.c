@@ -12,7 +12,7 @@
 //Windows não possui "sys/socket.h", esse programa rodará apenas no linux
 
 #define BUFSZ 1024
-#define THREAD_NUMBER 3
+#define THREAD_NUMBER 10
 
 int id;
 int s;
@@ -55,6 +55,14 @@ void recebeMensagem(void *arg){
             obtemInfo(buf);
             count = send(s, buf, strlen(buf), 0);
         }
+        else if(strncmp(buf,"New ID:",7) == 0){
+            obtemId(buf);
+        }
+        else if(strcmp(buf,"Equipment limit exceeded\n") == 0){
+            close(s);
+            exit(EXIT_SUCCESS);
+            return 0;
+        }
     }
 
     close(csock);
@@ -80,16 +88,6 @@ int main(int argc, char **argv){
 
     struct sockaddr *addr = (struct sockaddr *)(&storage);
     if(connect(s, addr, sizeof(storage)) != 0) logexit("connect");
-
-    //Confirmar conexão
-    count = recv(s, buf, BUFSZ, 0);
-    printf(buf);
-    if(strcmp(buf,"Equipment limit exceeded\n") == 0){
-        close(s);
-        exit(EXIT_SUCCESS);
-        return 0;
-    }
-    else obtemId(buf);
 
     //Comunicação cliente-servidor
     unsigned total = 0;
